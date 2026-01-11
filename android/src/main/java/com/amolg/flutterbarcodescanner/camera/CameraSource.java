@@ -882,44 +882,30 @@ public class CameraSource {
     }
 
     private void setRotation(Camera camera, Camera.Parameters parameters, int cameraId) {
-        WindowManager windowManager =
-                (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
+        WindowManager windowManager = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
         int degrees = 0;
         int rotation = windowManager.getDefaultDisplay().getRotation();
         switch (rotation) {
-            case Surface.ROTATION_0:
-                degrees = 0;
-                break;
-            case Surface.ROTATION_90:
-                degrees = 90;
-                break;
-            case Surface.ROTATION_180:
-                degrees = 180;
-                break;
-            case Surface.ROTATION_270:
-                degrees = 270;
-                break;
-            default:
-
+            case Surface.ROTATION_0: degrees = 0; break;
+            case Surface.ROTATION_90: degrees = 90; break;
+            case Surface.ROTATION_180: degrees = 180; break;
+            case Surface.ROTATION_270: degrees = 270; break;
         }
-
-        CameraInfo cameraInfo = new CameraInfo();
-        Camera.getCameraInfo(cameraId, cameraInfo);
-
-        int angle;
-        int displayAngle;
-        if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-            angle = (cameraInfo.orientation + degrees) % 360;
-            displayAngle = (360 - angle) % 360; // compensate for it being mirrored
-        } else {  // back-facing
-            angle = (cameraInfo.orientation - degrees + 360) % 360;
-            displayAngle = angle;
+    
+        CameraInfo info = new CameraInfo();
+        Camera.getCameraInfo(cameraId, info);
+    
+        int displayOrientation;
+        if (info.facing == CameraInfo.CAMERA_FACING_FRONT) {
+            displayOrientation = (info.orientation + degrees) % 360;
+            displayOrientation = (360 - displayOrientation) % 360;
+        } else {
+            displayOrientation = (info.orientation - degrees + 360) % 360;
         }
-
-        mRotation = angle / 90;
-
-        camera.setDisplayOrientation(displayAngle);
-        parameters.setRotation(angle);
+    
+        mRotation = displayOrientation / 90;
+        camera.setDisplayOrientation(displayOrientation);
+        parameters.setRotation(displayOrientation);
     }
 
     private byte[] createPreviewBuffer(Size previewSize) {
