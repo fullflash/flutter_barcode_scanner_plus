@@ -787,23 +787,46 @@ public class CameraSource {
      */
     private static SizePair selectSizePair(Camera camera, int desiredWidth, int desiredHeight) {
         List<SizePair> validPreviewSizes = generateValidPreviewSizeList(camera);
-
-        // The method for selecting the best size is to minimize the sum of the differences between
-        // the desired values and the actual values for width and height.  This is certainly not the
-        // only way to select the best size, but it provides a decent tradeoff between using the
-        // closest aspect ratio vs. using the closest pixel area.
+    
+        // 1. Calculate the aspect ratio we actually want (usually vertical for portrait)
+        // Note: Camera is usually landscape, so we use max/min to get the ratio
+        float targetRatio = (float) Math.max(desiredWidth, desiredHeight) / Math.min(desiredWidth, desiredHeight);
+    
         SizePair selectedPair = null;
         int minDiff = Integer.MAX_VALUE;
+        float minRatioDiff = Float.MAX_VALUE;
+    
+        // 2. First pass: Find the size that best matches the aspect ratio
         for (SizePair sizePair : validPreviewSizes) {
             Size size = sizePair.previewSize();
-            int diff = Math.abs(size.getWidth() - desiredWidth) +
-                    Math.abs(size.getHeight() - desiredHeight);
-            if (diff < minDiff) {
-                selectedPair = sizePair;
-                minDiff = diff;
+            float ratio = (float) Math.max(size.getWidth(), size.getHeight()) / Math.min(size.getWidth(), size.getHeight());
+            
+            float ratioDiff = Math.abs(ratio - targetRatio);
+            
+            // Priority 1: Match aspect ratio (within 0.1 tolerance)
+            // Priority 2: Match resolution closeness
+            if (ratioDiff < 0.1) {
+                int diff = Math.abs(size.getWidth() - desiredWidth) + Math.abs(size.getHeight() - desiredHeight);
+                if (diff < minDiff) {
+                    selectedPair = sizePair;
+                    minDiff = diff;
+                    minRatioDiff = ratioDiff;
+                }
             }
         }
-
+    
+        // 3. Fallback: If no perfect ratio match, use the original "closest size" logic
+        if (selectedPair == null) {
+            for (SizePair sizePair : validPreviewSizes) {
+                Size size = sizePair.previewSize();
+                int diff = Math.abs(size.getWidth() - desiredWidth) + Math.abs(size.getHeight() - desiredHeight);
+                if (diff < minDiff) {
+                    selectedPair = sizePair;
+                    minDiff = diff;
+                }
+            }
+        }
+    
         return selectedPair;
     }
 
